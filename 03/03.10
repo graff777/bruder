@@ -1,0 +1,19 @@
+//Задаём свойства ШИМ - сигнала
+const int Dimmer = 5
+const int freq = 5000;
+const int ledChannel = 0;
+const int resolution = 8;
+
+void setup() 
+{
+ledcSetup(ledChannel, freq, resolution);
+ledcAttachPin(Dimmer, ledChannel);  //управление регулятором ШИМ 0...3.3В
+pinMode(A0,INPUT)                   //термистор
+}
+
+void loop() 
+{
+int temp=  analogRead(A0)
+int temp2= (255*temp)/4096
+ledcWrite(ledChannel, temp2)
+}
