@@ -1,19 +1,44 @@
-//Задаём свойства ШИМ - сигнала
-const int Dimmer = 5
-const int freq = 5000;
-const int ledChannel = 0;
-const int resolution = 8;
+#define     B                     3950 // B-коэффициент
+#define     SERIAL_R              115000 // сопротивление последовательного резистора, 102 кОм
+#define     THERMISTOR_R          97000 // номинальное сопротивления термистора, 100 кОм
+#define     NOMINAL_T             25
+const int   freq = 5000;
+const int   ledChannel = 0;
+const int   resolution = 8;
+const int   Dimmer = 5;
+void setup() {
 
-void setup() 
-{
+
+Serial.begin(9600);
 ledcSetup(ledChannel, freq, resolution);
-ledcAttachPin(Dimmer, ledChannel);  //управление регулятором ШИМ 0...3.3В
-pinMode(A0,INPUT)                   //термистор
+ledcAttachPin(Dimmer, ledChannel);
+pinMode(33,INPUT);
 }
-
+// (вход, установка, п, и, д, период в секундах, мин.выход, макс. выход)
+int computePID(float input, float setpoint, float kp, float ki, float kd, float dt, int minOut, int maxOut) {
+  float err = setpoint - input;
+  static float integral = 0, prevErr = 0;
+  integral = constrain(integral + (float)err * dt * ki, minOut, maxOut);
+  float D = (err - prevErr) / dt;
+  prevErr = err;
+  return constrain(err * kp + integral + D * kd, minOut, maxOut);
+}
 void loop() 
 {
-int temp=  analogRead(A0)
-int temp2= (255*temp)/4096
-ledcWrite(ledChannel, temp2)
+int ntc = analogRead(33);
+float tr  = 4095.0/ntc - 1;
+tr = SERIAL_R/tr;
+float steinhart;
+steinhart = tr/THERMISTOR_R; // (R/Ro)
+steinhart = log(steinhart); // ln(R/Ro)
+steinhart /= B; // 1/B * ln(R/Ro)
+steinhart += 1.0 / (NOMINAL_T + 273.15); // + (1/To)
+steinhart = 1.0 / steinhart; // Invert
+steinhart -= 273.15;
+//computePID(steinhart, 35, 1, 1, 1, 1, int minOut, int maxOut);
+Serial.println(computePID(steinhart, 28, 1, 1, 1, 1, 0, 255));
+Serial.println(steinhart);
+//delay(500);
+ledcWrite(ledChannel, computePID(steinhart, 28, 1, 1, 1, 1, 0, 255));
+
 }
