@@ -1,0 +1,67 @@
+// делаем "сериал монитор" в браузере
+
+#define AP_SSID "ogorod"
+#define AP_PASS "graff777"
+String led_state;
+int valSlider;
+#include <GyverPortal.h>
+GyverPortal portal;
+
+// конструктор страницы
+void build() 
+{
+  BUILD_BEGIN();
+  int num=analogRead(33);
+  GP.LABEL("Умная теплица"); 
+  GP.BREAK();
+  GP.SPOILER_BEGIN("полив");            // начать спойлер
+//GP.SPOILER_BEGIN("полив", "#dc143c");      // + цвет из списка (умолч. GP_GREEN) или цвет в формате PSTR("#rrggbb")
+
+  GP.SLIDER("sld", valSlider, 0, 10);
+  GP.BUTTON("кнопка",  "полив вкл.", "", GP_BLUE); 
+  GP.HINT("подсказка", "включение автополива");
+  GP.HR();
+  GP.HINT("hint", "ghbf");
+  GP.BUTTON("кнопка2", "полив выкл.");
+  GP.LED("ltd",led_state);
+  GP.THEME(GP_DARK);
+  GP.SPOILER_END(); 
+  BUILD_END();
+}
+
+void setup() {
+  pinMode(2, OUTPUT);
+  pinMode(33, INPUT);
+  Serial.begin(115200);
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(AP_SSID, AP_PASS);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println(WiFi.localIP());
+
+  portal.start();
+  portal.attachBuild(build);
+  portal.attach(action);
+  portal.log.start(30);   // размер буфера
+}
+
+void action() {
+  if (portal.click("кнопка")) {
+    // отправляем обратно в "монитор" содержимое поля, оно пришло по клику кнопки
+    digitalWrite(2, HIGH);
+    led_state="HIGH";
+  }  
+  if (portal.click("кнопка2")) {
+    digitalWrite(2, LOW);
+    led_state="LOW";
+  }    
+}
+
+void loop() {
+  portal.tick();
+  led_state=digitalRead(2);
+  int num=analogRead(33);
+  Serial.println(led_state);
+}
